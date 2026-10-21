@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Calculadora de folletos: tríptico y cuadríptico envolvente." />
+  <meta name="description" content="Medidas, paneles y guías para trípticos y cuadrípticos: envolvente, acordeón y ventana, con lectura hebrea o española." />
   <title>Calculadora de folletos · Judaica Design®</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Condensed&display=swap" rel="stylesheet">
@@ -336,6 +336,18 @@
       font-size:11px;
     }
 
+    .mode-switch small{display:block;font-weight:400;font-size:11px;margin-top:5px;line-height:1.4}
+    .fold-switch{grid-template-columns:repeat(3,minmax(0,1fr))}.fold-switch button{padding:14px 8px}
+    .fold-switch svg{display:block;width:70px;height:35px;margin:0 auto 10px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    button:disabled{opacity:.4;cursor:default}.fold-description{font-size:13px;line-height:1.6;color:var(--muted);margin:-8px 0 22px;min-height:40px}
+    .layout-tip{border-radius:10px;background:var(--teal-soft);color:var(--teal-dark);font-size:13px;line-height:1.6;padding:14px 16px}
+    .face-title{font:400 23px/1.2 var(--serif);color:var(--teal);margin:22px 0 10px}
+    .panel.front{background:var(--teal-soft);border-color:#92b9b6}.panel.back{background:var(--gold-soft);border-color:#d6bc8d}.panel.back::before{background:var(--gold)}
+    .panel-id{font-size:10px;color:var(--muted);margin-bottom:9px;letter-spacing:.03em}.panel-name{font-weight:600;min-height:32px;color:var(--ink)}.panel-value{margin:9px 0;font-size:27px;white-space:nowrap}.panel-rule{font-size:10px}
+    .guides{font-size:12px;color:var(--teal);font-weight:600;line-height:1.5;margin:10px 0 20px}.reverse-note{color:var(--muted);font-size:12px;line-height:1.5;border-top:1px solid var(--line);padding-top:16px}
+    details{margin-top:20px}summary{cursor:pointer;color:var(--teal);font-size:13px;font-weight:600;margin-bottom:14px}details .input-wrap{max-width:200px}
+    .sources{font-size:12px;line-height:1.6}.sources a{color:var(--teal)}.sources ul{padding-left:20px}
+    [hidden]{display:none!important}
     @media (max-width:900px){
       h1{font-size:34px;}
       .section-label,.diagram-title{font-size:24px;}
@@ -353,7 +365,11 @@
       .panel-rule{font-size:10px;}
       .summary{ grid-template-columns:1fr; }
       .total-chip{ justify-self:start; }
-      .mode-switch{ grid-template-columns:1fr; }
+      .mode-switch{ grid-template-columns:1fr 1fr; }
+      .fold-switch{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px}
+      .mode-switch button{font-size:12px;padding:10px 8px;min-width:0}.mode-switch small{font-size:10px}
+      .fold-switch svg{width:55px;height:30px}.panel-value{font-size:20px}.panel-name{font-size:10px;overflow-wrap:anywhere;min-height:40px}.panel-id{font-size:9px}.panel-rule{font-size:9px}
+      .result-main .big{font-size:32px}.face-title{font-size:22px}
     }
   </style>
 </head>
@@ -364,18 +380,31 @@
       <div class="eyebrow">Calculadora de plegado</div>
       <h1>Calculadora de folletos</h1>
       <p class="subtitle">
-        Elegí tríptico o cuadríptico envolvente y calculá los paneles según
-        el ancho cerrado o el ancho total abierto.
+        Elegí cómo se lee y se dobla. Calculá las medidas y ubicá tapa, contratapa e interiores en las dos caras del archivo.
       </p>
     </header>
 
     <section class="card">
-      <h2 class="section-label">Tipo de folleto</h2>
+      <h2 class="section-label">1 · ¿Cómo se lee?</h2>
+      <div class="mode-switch reading-switch" role="group" aria-label="Sentido de lectura">
+        <button id="hebrewBtn" class="active" type="button" aria-pressed="true">Hebreo <small>De derecha a izquierda</small></button>
+        <button id="spanishBtn" type="button" aria-pressed="false">Español <small>De izquierda a derecha</small></button>
+      </div>
+      <h2 class="section-label">2 · Tipo de folleto</h2>
       <div class="mode-switch" role="group" aria-label="Tipo de folleto">
         <button id="triBtn" type="button" aria-pressed="false">Tríptico · 3 paneles</button>
         <button id="quadBtn" class="active" type="button" aria-pressed="true">Cuadríptico · 4 paneles</button>
       </div>
-      <h2 class="section-label">¿Qué medida conocés?</h2>
+      <h2 class="section-label">3 · ¿Cómo se dobla?</h2>
+      <div class="mode-switch fold-switch" role="group" aria-label="Tipo de plegado">
+        <button id="rollBtn" class="active" type="button" aria-pressed="true"><svg viewBox="0 0 90 40" aria-hidden="true"><path d="M8 33H80V8H22v16h45v-7H36"/></svg><span>Envolvente</span><small>Solapas hacia adentro</small></button>
+        <button id="accordionBtn" type="button" aria-pressed="false"><svg viewBox="0 0 90 40" aria-hidden="true"><path d="m6 31 24-22 27 22 27-22"/></svg><span id="accordion-name">Acordeón · zigzag</span><small>Pliegues alternados</small></button>
+        <button id="gateBtn" type="button" aria-pressed="false"><svg viewBox="0 0 90 40" aria-hidden="true"><path d="M45 33H8V9h30m7 24h37V9H52M45 33V19"/></svg><span>Ventana cerrada</span><small>Doble puerta + cierre al medio</small></button>
+      </div>
+      <p id="gate-help" class="helper" hidden>Ventana con cierre central: disponible en cuadrípticos.</p>
+      <p id="fold-description" class="fold-description"></p>
+      <p id="selection-status" class="helper" role="status" aria-live="polite"></p>
+      <h2 class="section-label">4 · ¿Qué medida conocés?</h2>
 
       <div class="mode-switch" role="group" aria-label="Seleccionar tipo de medida">
         <button id="closedBtn" class="active" type="button" aria-pressed="true">
@@ -405,35 +434,19 @@
         </div>
       </div>
 
-      <h3 class="diagram-title">Distribución de paneles</h3><p class="helper" id="orientation">Vista exterior (lectura hebrea), de izquierda a derecha.</p>
-
-      <div id="diagram" class="diagram" aria-label="Distribución de paneles del cuadríptico">
-        <div class="panel">
-          <div class="panel-name">Tapa</div>
-          <div class="panel-value" id="p1">135 mm</div>
-          <div class="panel-rule">X</div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-name">Contratapa</div>
-          <div class="panel-value" id="p2">135 mm</div>
-          <div class="panel-rule">X</div>
-        </div>
-
-        <div class="panel flap">
-          <div class="panel-name">1.ª solapa interna</div>
-          <div class="panel-value" id="p3">133 mm</div>
-          <div class="panel-rule">X − 2 mm</div>
-        </div>
-
-        <div class="panel flap">
-          <div class="panel-name">2.ª solapa interna</div>
-          <div class="panel-value" id="p4">131 mm</div>
-          <div class="panel-rule">X − 4 mm</div>
-        </div>
-      </div>
-
-      <p class="helper">Esquema proporcional orientativo: no utilizar como plantilla de corte.</p>
+      <details id="compensation-settings"><summary>Ajuste de imprenta · reducción de solapas</summary><label for="compensation">Reducción (mm)</label><div class="input-wrap"><input id="compensation" type="number" inputmode="decimal" min="0" max="10" step="0.1" value="2"><span class="unit">mm</span></div><p class="helper">Valor orientativo de 2 mm. Ajustalo si tu imprenta indica otra tolerancia. En envolvente se acumula por paso; en ventana se aplica a cada puerta.</p></details>
+      <section class="layout-result" aria-label="Paneles y guías del archivo" aria-live="polite">
+      <h3 class="diagram-title">Así armás las dos caras</h3><p class="helper" id="orientation"></p>
+      <p class="layout-tip" id="layout-tip"></p>
+      <h4 class="face-title" id="front-title">Cara A · exterior</h4>
+      <div id="diagram" class="diagram" dir="ltr" aria-label="Paneles de cara A"></div>
+      <p id="guides-front" class="guides"></p>
+      <div class="reverse-note">↔ Al dar vuelta la hoja, el orden físico se invierte. Los números identifican el mismo panel en ambas caras.</div>
+      <h4 class="face-title" id="back-title">Cara B · interior</h4>
+      <div id="diagram-back" class="diagram" dir="ltr" aria-label="Paneles de cara B"></div>
+      <p id="guides-back" class="guides"></p>
+      <p class="helper">Esquema proporcional orientativo: no utilizar como plantilla de corte. Cada cara corresponde a una página del archivo abierto. Valores redondeados a 2 decimales.</p>
+      </section>
 
       <div class="summary">
         <div>
@@ -452,10 +465,11 @@
       </div>
     </section>
 
+    <details class="sources"><summary>Referencias de plegado</summary><p>Distribuciones contrastadas con plantillas de imprenta. La lectura hebrea invierte horizontalmente las distribuciones occidentales. Ventana corresponde aquí al doble cierre, con dos puertas y un pliegue central.</p><ul><li><a href="https://www.hopkinsprinting.com/folding/" target="_blank" rel="noopener">Hopkins Printing · envolvente y ventana cerrada</a></li><li><a href="https://www.printpapatrade.com/templates/BROCHURE/8.5%20x%2011%20Z-Fold/trade_8.5%20x%2011%20Z_Fold.pdf" target="_blank" rel="noopener">PrintPapa · tríptico Z, ambas caras</a></li><li><a href="https://printgraphics.com.au/wp-content/uploads/2019/01/8pp-DL-Z-Fold.pdf" target="_blank" rel="noopener">Printgraphics · cuadríptico acordeón, ambas caras</a></li></ul></details>
     <footer>Judaica Design® · Herramienta para maquetación</footer>
   </main>
 
-  <script src="calculator.js?v=20261008-paneles"></script>
+  <script src="calculator.js?v=20261021-plegados"></script>
 <script src="jd-embed.js?v=20261007-tools"></script>
 </body>
 </html>

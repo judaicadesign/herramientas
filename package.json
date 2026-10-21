@@ -1,1 +1,9 @@
-{"private":true,"scripts":{"test":"node tests/calculator.cjs"}}
+{
+  "private": true,
+  "scripts": {
+    "test": "node tests/calculator.cjs && node tests/ui.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}
