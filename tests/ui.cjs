@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{JSDOM}=require('jsdom');
-const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{runScripts:'outside-only',url:'https://judaicadesign.github.io/calculadora-cuadriptico/'}),w=dom.window,$=id=>w.document.getElementById(id);
+const dom=new JSDOM(fs.readFileSync('folletos/index.html','utf8'),{runScripts:'outside-only',url:'https://judaicadesign.github.io/herramientas/folletos/'}),w=dom.window,$=id=>w.document.getElementById(id);
 w.eval(fs.readFileSync('calculator.js','utf8'));
 const labels=id=>[...$(id).querySelectorAll('.panel-name')].map(e=>e.textContent);
 const widths=id=>[...$(id).querySelectorAll('.panel-value')].map(e=>e.textContent);

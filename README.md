@@ -1,4 +1,8 @@
-# Calculadora de folletos · armado del archivo
+# Herramientas de Judaica Design
+
+Sitio público independiente: calculadora de paneles en `folletos/`, revisión en `pdf/` e imposición en `cuadernillo/`. No incluye portal, cotizador comercial, reglas de precios ni configuración de Supabase.
+
+## Calculadora de folletos · armado del archivo
 
 Calcula anchos y guías; no calcula precios ni envía cotizaciones.
 Lectura hebrea (por defecto) y española; tríptico/cuadríptico envolvente,
