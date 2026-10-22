@@ -71,3 +71,9 @@ No se copian recursos gráficos de las imprentas.
 `npm test`: medidas, fórmulas inversas, ubicaciones explícitas de tapas,
 inversión de ambas caras, correspondencia física y guías del reverso,
 compensaciones y estados inválidos.
+
+## Armado de cuadernillos
+
+La herramienta aplica la rotación interna del PDF conservando texto y vectores. Permite elegir lectura hebrea/española, un giro adicional de 90°, 180° o 270°, y hoja automática, horizontal o vertical. El esquema y la vista previa señalan el pliegue y el abrochado central sin dibujar grampas sobre el archivo descargable. Las instrucciones de doble faz se ajustan a la geometría; el PDF ya está impuesto y no debe volver a imponerse desde la impresora.
+
+`npm test` también comprueba todas las combinaciones de giros, RTL/LTR, referencias a recursos PDF, cajas de corte/demasía y cambios de opciones que invalidan la descarga anterior.

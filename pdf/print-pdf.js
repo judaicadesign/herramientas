@@ -4,14 +4,15 @@
  const MM=72/25.4, EPS=.15,MAX_BYTES=200*1024*1024;
  const intersects=(a,b)=>{const x=Math.max(a.x,b.x),y=Math.max(a.y,b.y);return{x,y,width:Math.max(0,Math.min(a.x+a.width,b.x+b.width)-x),height:Math.max(0,Math.min(a.y+a.height,b.y+b.height)-y)};};
  function geometry(page,finalSize){
+  const rotation=((page.getRotation().angle%360)+360)%360,swap=rotation%180!==0;
   const media=page.getMediaBox(),crop=intersects(page.getCropBox(),media);
   let trim=page.node.has(P.PDFName.of('TrimBox'))?page.getTrimBox():crop;
-  if(finalSize){const w=Number(finalSize.width)*MM,h=Number(finalSize.height)*MM;if(!(w>0&&h>0&&w<=crop.width+EPS&&h<=crop.height+EPS))throw Error('La medida final debe caber dentro de todas las páginas.');trim={x:crop.x+(crop.width-w)/2,y:crop.y+(crop.height-h)/2,width:w,height:h};}
+  if(finalSize){const w=Number(swap?finalSize.height:finalSize.width)*MM,h=Number(swap?finalSize.width:finalSize.height)*MM;if(!(w>0&&h>0&&w<=crop.width+EPS&&h<=crop.height+EPS))throw Error('La medida final debe caber dentro de todas las páginas.');trim={x:crop.x+(crop.width-w)/2,y:crop.y+(crop.height-h)/2,width:w,height:h};}
   if(trim.width<=0||trim.height<=0||Math.abs(intersects(trim,media).width-trim.width)>EPS||Math.abs(intersects(trim,media).height-trim.height)>EPS)throw Error('El tamaño de corte del PDF no es válido.');
   // Without an explicit BleedBox, media outside the crop may contain old marks.
   const bleed=intersects(page.node.has(P.PDFName.of('BleedBox'))?page.getBleedBox():crop,media);
   const available={left:Math.max(0,trim.x-bleed.x),right:Math.max(0,bleed.x+bleed.width-trim.x-trim.width),bottom:Math.max(0,trim.y-bleed.y),top:Math.max(0,bleed.y+bleed.height-trim.y-trim.height)};
-  return{trim,media,available,rotation:((page.getRotation().angle%360)+360)%360};
+  return{trim,media,available,rotation,viewTrim:{width:swap?trim.height:trim.width,height:swap?trim.width:trim.height}};
  }
  async function load(bytes){
   if(!P)throw Error('No se pudo cargar el motor PDF. Recargá la página.');
@@ -24,8 +25,8 @@
  function inspect(doc,finalSize){
   const pages=doc.getPages().map((page,i)=>({number:i+1,...geometry(page,finalSize)}));
   const first=pages[0];if(!first)throw Error('El PDF no tiene páginas.');
-  const mixed=pages.some(p=>Math.abs(p.trim.width-first.trim.width)>EPS||Math.abs(p.trim.height-first.trim.height)>EPS);
-  return{pages,count:pages.length,mixed,rotated:pages.some(p=>p.rotation!==0),blankPages:(4-pages.length%4)%4,hasThreeMM:pages.every(p=>Object.values(p.available).every(v=>v>=3*MM-EPS))};
+  const mixed=pages.some(p=>Math.abs(p.viewTrim.width-first.viewTrim.width)>EPS||Math.abs(p.viewTrim.height-first.viewTrim.height)>EPS);
+  return{pages,count:pages.length,mixed,normalizedRotations:doc.jdNormalizedRotations||0,rotated:pages.some(p=>p.rotation!==0),blankPages:(4-pages.length%4)%4,hasThreeMM:pages.every(p=>Object.values(p.available).every(v=>v>=3*MM-EPS))};
  }
  function bookletPlan(count,direction='rtl'){
   if(!Number.isInteger(count)||count<1||count>400)throw Error('Cantidad de páginas inválida.');
@@ -59,9 +60,46 @@
   const gap=b+2*MM,len=4*MM;
   for(const position of positions)for(const side of [-1,1]){const edge=side<0?y:y+h;page.drawLine({start:{x:x+position,y:edge+side*gap},end:{x:x+position,y:edge+side*(gap+len)},thickness:.4,dashArray:[2,2],color:P.cmyk(0,0,0,1)});}
  }
+ function drawTurned(page,embedded,x,y,width,height,clockwise){
+  if(clockwise===90)page.drawPage(embedded,{x,y:y+width,width,height,rotate:P.degrees(-90)});
+  else if(clockwise===180)page.drawPage(embedded,{x:x+width,y:y+height,width,height,rotate:P.degrees(180)});
+  else if(clockwise===270)page.drawPage(embedded,{x:x+height,y,width,height,rotate:P.degrees(90)});
+  else page.drawPage(embedded,{x,y,width,height});
+ }
+ function turnedBox(box,media,angle){
+  const x=box.x-media.x,y=box.y-media.y,w=box.width,h=box.height,W=media.width,H=media.height;
+  if(angle===90)return{x:y,y:W-x-w,width:h,height:w};
+  if(angle===180)return{x:W-x-w,y:H-y-h,width:w,height:h};
+  if(angle===270)return{x:H-y-h,y:x,width:h,height:w};
+  return{x,y,width:w,height:h};
+ }
+ async function normalizeDocument(doc,extra=0){
+  const count=doc.getPages().filter(p=>(p.getRotation().angle+extra)%360!==0).length;
+  if(!count)return doc;
+  const out=await P.PDFDocument.create();
+  for(const source of doc.getPages()){
+   const media=source.getMediaBox(),angle=((source.getRotation().angle+extra)%360+360)%360;
+   if(![0,90,180,270].includes(angle))throw Error('La rotación del PDF debe ser un múltiplo de 90°.');
+   const size=turnedBox(media,media,angle),page=out.addPage([size.width,size.height]);
+   if(source.node.Contents()){
+    const embedded=await out.embedPage(source,{left:media.x,bottom:media.y,right:media.x+media.width,top:media.y+media.height});
+    drawTurned(page,embedded,0,0,media.width,media.height,angle);
+   }
+   for(const [name,get,set]of [['CropBox','getCropBox','setCropBox'],['TrimBox','getTrimBox','setTrimBox'],['BleedBox','getBleedBox','setBleedBox']])if(source.node.has(P.PDFName.of(name))){const b=turnedBox(source[get](),media,angle);page[set](b.x,b.y,b.width,b.height);}
+  }
+  await out.flush();out.jdNormalizedRotations=count;return out;
+ }
+ function bookletLayout(info,options={}){
+  const angle=options.pageRotation==='auto'||options.pageRotation==null?0:Number(options.pageRotation);
+  if(![0,90,180,270].includes(angle))throw Error('Elegí un giro de 0°, 90°, 180° o 270°.');
+  const orientation=options.sheetOrientation||'auto';if(!['auto','landscape','portrait'].includes(orientation))throw Error('Orientación de hoja inválida.');
+  const t=info.pages[0].viewTrim||info.pages[0].trim,w=angle%180?t.height:t.width,h=angle%180?t.width:t.height,pad=(Number(options.bleedMM||0)+(options.marks?7:0))*MM;
+  const rawWidth=2*w+2*pad,rawHeight=h+2*pad;
+  const sheetRotation=(orientation==='portrait'&&rawWidth>rawHeight+EPS)||(orientation==='landscape'&&rawHeight>rawWidth+EPS)?90:0;
+  return{pageRotation:angle,sheetRotation,width:sheetRotation?rawHeight:rawWidth,height:sheetRotation?rawWidth:rawHeight,pageWidth:w,pageHeight:h,spineAxis:sheetRotation?'horizontal':'vertical',duplexEdge:rawHeight>rawWidth?'long':'short'};
+ }
  async function prepare(bytes,options={}){
-  const doc=await load(bytes),info=inspect(doc,options.finalSize);
-  if(info.rotated)throw Error('Hay páginas con rotación interna. Exportalas con la orientación aplicada antes de prepararlas.');
+  const doc=await normalizeDocument(await load(bytes)),info=inspect(doc,options.finalSize);
   const b=bound(options.bleedMM??0,0,10,'Demasía')*MM,marks=!!options.marks;
   const fill=options.fill||'none';if(!['none','white','color'].includes(fill))throw Error('Tipo de fondo inválido.');
   let color=P.rgb(1,1,1);if(fill==='color'){if(!/^#[0-9a-f]{6}$/i.test(options.color||''))throw Error('Elegí un color válido.');const h=options.color.slice(1);color=P.rgb(parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255);}
@@ -113,25 +151,29 @@
    if(folds.length){const reflected=options.folds.mirrorBack!==false&&i%2===1;foldMarks(page,px,py,t.height,b,reflected?folds.map(v=>t.width-v):folds);}
    prepared.push(page);
   }
-  let result=output,plan=null;
+  let result=output,plan=null,layout=null;
   if(options.booklet){
    // Materialize embedded page/font resources before copying them to the sheet PDF.
    await output.flush();
    result=await P.PDFDocument.create();plan=bookletPlan(info.count,options.direction||'rtl');
-   const w=info.pages[0].trim.width,h=info.pages[0].trim.height,pad=b+(marks?7*MM:0);
+   layout=bookletLayout(info,options);
+   const w=layout.pageWidth,h=layout.pageHeight,pad=b+(marks?7*MM:0);
    const embeddedCache=new Map();
    for(const side of plan){
     const sheet=result.addPage([2*w+2*pad,h+2*pad]);sheet.setTrimBox(pad,pad,2*w,h);sheet.setBleedBox(pad-b,pad-b,2*w+2*b,h+2*b);
     for(const [slot,n]of side.pages.entries()){
-     if(n===null)continue;const src=prepared[n-1];if(!src.node.Contents())continue;const t=src.getTrimBox(),left=slot===0?b:0,right=slot===1?b:0,key=n+':'+slot;
-     let emb=embeddedCache.get(key);if(!emb){emb=await result.embedPage(src,{left:t.x-left,bottom:t.y-b,right:t.x+w+right,top:t.y+h+b});embeddedCache.set(key,emb);}
-     sheet.drawPage(emb,{x:pad+slot*w-left,y:pad-b,width:w+left+right,height:h+2*b});
+     if(n===null)continue;const src=prepared[n-1];if(!src.node.Contents())continue;const t=src.getTrimBox(),left=slot===0?b:0,right=slot===1?b:0;
+     let emb=embeddedCache.get(n);if(!emb){emb=await result.embedPage(src,{left:t.x-b,bottom:t.y-b,right:t.x+t.width+b,top:t.y+t.height+b});embeddedCache.set(n,emb);}
+     sheet.pushOperators(P.pushGraphicsState(),P.rectangle(pad+slot*w-left,pad-b,w+left+right,h+2*b),P.clip(),P.endPath());
+     drawTurned(sheet,emb,pad+slot*w-b,pad-b,t.width+2*b,t.height+2*b,layout.pageRotation);
+     sheet.pushOperators(P.popGraphicsState());
     }
-    if(marks)cropMarks(sheet,pad,pad,2*w,h,b);
+    if(marks){cropMarks(sheet,pad,pad,2*w,h,b);foldMarks(sheet,pad,pad,h,b,[w]);}
    }
   }
+  if(layout?.sheetRotation){await result.flush();result=await normalizeDocument(result,layout.sheetRotation);}
   result.setTitle(options.booklet?'Folleto listo para imprimir':'PDF preparado para imprimir');result.setCreator('Judaica Design');
-  return{bytes:await result.save(),info,plan,pageCount:result.getPageCount()};
+  return{bytes:await result.save(),info,plan,layout,pageCount:result.getPageCount()};
  }
- return{MM,MAX_BYTES,load,inspect,prepare,bookletPlan,foldPositions};
+ return{MM,MAX_BYTES,load,inspect,prepare,bookletPlan,bookletLayout,foldPositions};
 });
